@@ -18,9 +18,9 @@ $ = jQuery
 
 class LightboxOptions
   constructor: ->
-    @fadeDuration         = 500
-    @fitImagesInViewport  = true 
-    @resizeDuration       = 700
+    @fadeDuration         = 200
+    @fitImagesInViewport  = true
+    @resizeDuration       = 200
     @showImageNumberLabel = true
     @wrapAround           = false
 
@@ -52,7 +52,9 @@ class Lightbox
   # Build html for the lightbox and the overlay.
   # Attach event handlers to the new DOM elements. click click click
   build: ->
-    $("<div id='lightboxOverlay' class='lightboxOverlay'></div><div id='lightbox' class='lightbox'><div class='lb-outerContainer'><div class='lb-container'><img class='lb-image' src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=' /><div class='lb-nav'><a class='lb-prev' href='' ></a><a class='lb-next' href='' ></a></div><div class='lb-loader'><a class='lb-cancel'></a></div></div></div><div class='lb-dataContainer'><div class='lb-data'><div class='lb-details'><span class='lb-caption'></span><span class='lb-number'></span></div><div class='lb-closeContainer'><a class='lb-close'></a></div></div></div></div>").appendTo($('body'));
+    #$("<div id='lightboxOverlay' class='lightboxOverlay'></div><div id='lightbox' class='lightbox'><div class='lb-outerContainer'><div class='lb-container'><img class='lb-image' src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=' /><div class='lb-nav'><a class='lb-prev' href='' ></a><a class='lb-next' href='' ></a></div><div class='lb-loader'><a class='lb-cancel'></a></div></div></div><div class='lb-dataContainer'><div class='lb-data'><div class='lb-details'><span class='lb-caption'></span><span class='lb-number'></span></div><div class='lb-closeContainer'><a class='lb-close'></a></div></div></div></div>").appendTo($('body'));
+    # DOM構造の変更 lb-container内のnav等を外だし
+    $("<div id='lightboxOverlay' class='lightboxOverlay'></div><div id='lightbox' class='lightbox'><div class='lb-outerContainer'><div class='lb-container'><img class='lb-image' src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=' /></div><div class='lb-nav'><a class='lb-prev' href='' ></a><a class='lb-next' href='' ></a></div><div class='lb-loader'><a class='lb-cancel'></a></div></div><div class='lb-dataContainer'><div class='lb-data'><div class='lb-details'><span class='lb-caption'></span><span class='lb-number'></span></div><div class='lb-closeContainer'><a class='lb-close'></a></div></div></div></div>").appendTo($('body'));
 
     # Cache jQuery objects
     @$lightbox       = $('#lightbox')
@@ -116,26 +118,29 @@ class Lightbox
     imageNumber = 0
 
     # Supporting both data-lightbox attribute and rel attribute implementations
+    # Add data-orientation by knjcode
     dataLightboxValue = $link.attr 'data-lightbox'
     if dataLightboxValue
       for a, i in $( $link.prop("tagName") + '[data-lightbox="' + dataLightboxValue + '"]')
-        @album.push link: $(a).attr('href'), title: $(a).attr('title')
+        @album.push link: $(a).attr('href'), title: $(a).attr('title'), rotate: $(a).data('orientation')
         if $(a).attr('href') == $link.attr('href')
           imageNumber = i
     else 
       if $link.attr('rel') == 'lightbox'
         # If image is not part of a set
-        @album.push link: $link.attr('href'), title: $link.attr('title')
+        @album.push link: $link.attr('href'), title: $link.attr('title'), rotate: $(a).data('orientation')
       else
         # Image is part of a set
         for a, i in $( $link.prop("tagName") + '[rel="' + $link.attr('rel') + '"]')
-          @album.push link: $(a).attr('href'), title: $(a).attr('title')
+          @album.push link: $(a).attr('href'), title: $(a).attr('title'), rotate: $(a).data('orientation')
           if $(a).attr('href') == $link.attr('href')
             imageNumber = i
 
     # Position lightbox
     $window = $(window)
-    top     = $window.scrollTop() + $window.height()/10
+    # Modify top by knjcode
+    top     = $window.scrollTop() + 10
+    #top     = $window.scrollTop() + $window.height()/10
     left    = $window.scrollLeft()
     @$lightbox
       .css
@@ -177,7 +182,8 @@ class Lightbox
         windowWidth    = $(window).width()
         windowHeight   = $(window).height()
         maxImageWidth  = windowWidth - @containerLeftPadding - @containerRightPadding - 20
-        maxImageHeight = windowHeight - @containerTopPadding - @containerBottomPadding - 110
+        # change to -380 by knjcode
+        maxImageHeight = windowHeight - @containerTopPadding - @containerBottomPadding - 380
         
         # Is there a fitting issue at all?
         if (preloader.width > maxImageWidth) || (preloader.height > maxImageHeight)
@@ -193,7 +199,14 @@ class Lightbox
             $image.width imageWidth
             $image.height imageHeight
 
-      @sizeContainer $image.width(), $image.height()
+      # Add by knjcode & plus imageNumber
+      switch @album[imageNumber].rotate
+        when "Rotated 90 CCW"
+          @sizeContainer $image.height(), $image.width(), imageNumber
+        when "Rotated 90 CW"
+          @sizeContainer $image.height(), $image.width(), imageNumber
+        else
+          @sizeContainer $image.width(), $image.height(), imageNumber
 
     preloader.src = @album[imageNumber].link
     @currentImageIndex = imageNumber
@@ -208,7 +221,16 @@ class Lightbox
 
 
   # Animate the size of the lightbox to fit the image we are showing
-  sizeContainer: (imageWidth, imageHeight) ->
+  sizeContainer: (imageWidth, imageHeight, imageNumber) ->
+    # コンテナの回転
+    @$container.rotate 0, 'abs' # reset rotate
+
+    switch @album[imageNumber].rotate
+      when "Rotated 90 CCW"
+        @$container.rotate 90, 'abs'  # rotate 90 if "Rotated 90 CCW"
+      when "Rotated 90 CW"
+        @$container.rotate 270, 'abs' # rotate 270 if "Rotated 90 CW"
+ 
     oldWidth  = @$outerContainer.outerWidth()
     oldHeight = @$outerContainer.outerHeight()
     newWidth  = imageWidth + @containerLeftPadding + @containerRightPadding
