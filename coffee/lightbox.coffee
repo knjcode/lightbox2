@@ -118,7 +118,7 @@ class Lightbox
     imageNumber = 0
 
     # Supporting both data-lightbox attribute and rel attribute implementations
-    # Add data-orientation by knjcode
+    # Add supoorting  data-orientation attribute
     dataLightboxValue = $link.attr 'data-lightbox'
     if dataLightboxValue
       for a, i in $( $link.prop("tagName") + '[data-lightbox="' + dataLightboxValue + '"]')
@@ -138,9 +138,7 @@ class Lightbox
 
     # Position lightbox
     $window = $(window)
-    # Modify top by knjcode
-    top     = $window.scrollTop() + 10
-    #top     = $window.scrollTop() + $window.height()/10
+    top     = $window.scrollTop() + $window.height()/10
     left    = $window.scrollLeft()
     @$lightbox
       .css
@@ -201,9 +199,7 @@ class Lightbox
 
       # Add by knjcode & plus imageNumber
       switch @album[imageNumber].rotate
-        when "Rotated 90 CCW"
-          @sizeContainer $image.height(), $image.width(), imageNumber
-        when "Rotated 90 CW"
+        when "Rotated 90 CCW", "Rotated 90 CW"
           @sizeContainer $image.height(), $image.width(), imageNumber
         else
           @sizeContainer $image.width(), $image.height(), imageNumber
@@ -222,14 +218,19 @@ class Lightbox
 
   # Animate the size of the lightbox to fit the image we are showing
   sizeContainer: (imageWidth, imageHeight, imageNumber) ->
-    # コンテナの回転
-    @$container.rotate 0, 'abs' # reset rotate
+    $image = @$lightbox.find('.lb-image')
 
+    # reset rotate & reflect
+    @$container.css('transform','');
+    $image.css('transform','')
+
+    # rotate & reflect image
     switch @album[imageNumber].rotate
       when "Rotated 90 CCW"
-        @$container.rotate 90, 'abs'  # rotate 90 if "Rotated 90 CCW"
+        @$container.css('transform','rotate(90deg)')
       when "Rotated 90 CW"
-        @$container.rotate 270, 'abs' # rotate 270 if "Rotated 90 CW"
+        @$container.css('transform','rotate(90deg)')
+        @$lightbox.find('.lb-image').css('transform','scaleX(-1)')
  
     oldWidth  = @$outerContainer.outerWidth()
     oldHeight = @$outerContainer.outerHeight()

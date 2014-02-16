@@ -162,7 +162,7 @@ Licensed under the Creative Commons Attribution 2.5 License - http://creativecom
         }
       }
       $window = $(window);
-      top = $window.scrollTop() + 10;
+      top = $window.scrollTop() + $window.height() / 10;
       left = $window.scrollLeft();
       this.$lightbox.css({
         top: top + 'px',
@@ -209,7 +209,6 @@ Licensed under the Creative Commons Attribution 2.5 License - http://creativecom
           }
           switch (_this.album[imageNumber].rotate) {
             case "Rotated 90 CCW":
-              return _this.sizeContainer($image.height(), $image.width(), imageNumber);
             case "Rotated 90 CW":
               return _this.sizeContainer($image.height(), $image.width(), imageNumber);
             default:
@@ -226,14 +225,17 @@ Licensed under the Creative Commons Attribution 2.5 License - http://creativecom
     };
 
     Lightbox.prototype.sizeContainer = function(imageWidth, imageHeight, imageNumber) {
-      var newHeight, newWidth, oldHeight, oldWidth;
-      this.$container.rotate(0, 'abs');
+      var $image, newHeight, newWidth, oldHeight, oldWidth;
+      $image = this.$lightbox.find('.lb-image');
+      this.$container.css('transform', '');
+      $image.css('transform', '');
       switch (this.album[imageNumber].rotate) {
         case "Rotated 90 CCW":
-          this.$container.rotate(90, 'abs');
+          this.$container.css('transform', 'rotate(90deg)');
           break;
         case "Rotated 90 CW":
-          this.$container.rotate(270, 'abs');
+          this.$container.css('transform', 'rotate(90deg)');
+          this.$lightbox.find('.lb-image').css('transform', 'scaleX(-1)');
       }
       oldWidth = this.$outerContainer.outerWidth();
       oldHeight = this.$outerContainer.outerHeight();
