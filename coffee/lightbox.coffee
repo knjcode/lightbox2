@@ -199,7 +199,7 @@ class Lightbox
 
       # Add by knjcode & plus imageNumber
       switch @album[imageNumber].rotate
-        when "Rotated 90 CCW", "Rotated 90 CW"
+        when "Rotated 90 CCW", "Rotated 90 CW", "Mirrored horizontal then rotated 90 CCW", "Mirrored horizontal then rotated 90 CW"
           @sizeContainer $image.height(), $image.width(), imageNumber
         else
           @sizeContainer $image.width(), $image.height(), imageNumber
@@ -221,17 +221,29 @@ class Lightbox
     $image = @$lightbox.find('.lb-image')
 
     # reset rotate & reflect
-    @$container.css('transform','');
+    @$container.css('transform','')
     $image.css('transform','')
 
     # rotate & reflect image
     switch @album[imageNumber].rotate
-      when "Rotated 90 CCW"
-        @$container.css('transform','rotate(90deg)')
       when "Rotated 90 CW"
         @$container.css('transform','rotate(90deg)')
-        @$lightbox.find('.lb-image').css('transform','scaleX(-1)')
- 
+        $image.css('transform','scale(-1,-1)')
+      when "Rotated 90 CCW"
+        @$container.css('transform','rotate(90deg)')
+      when "Rotated 180"
+        $image.css('transform','scale(-1,-1)')
+      when "Mirrored horizontal"
+        $image.css('transform','scaleX(-1)')
+      when "Mirrored vertical"
+        $image.css('transform','scaleY(-1)')
+      when "Mirrored horizontal then rotated 90 CCW"
+        @$container.css('transform','rotate(90deg)')
+        $image.css('transform','scaleY(-1)')
+      when "Mirrored horizontal then rotated 90 CW"
+        @$container.css('transform','rotate(90deg)')
+        $image.css('transform','scaleX(-1)')
+
     oldWidth  = @$outerContainer.outerWidth()
     oldHeight = @$outerContainer.outerHeight()
     newWidth  = imageWidth + @containerLeftPadding + @containerRightPadding
@@ -349,6 +361,7 @@ class Lightbox
     @$lightbox.fadeOut @options.fadeDuration
     @$overlay.fadeOut @options.fadeDuration
     $('select, object, embed').css visibility: "visible"
+    @$overlay.onClick
 
 
 $ ->

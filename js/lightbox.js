@@ -210,6 +210,8 @@ Licensed under the Creative Commons Attribution 2.5 License - http://creativecom
           switch (_this.album[imageNumber].rotate) {
             case "Rotated 90 CCW":
             case "Rotated 90 CW":
+            case "Mirrored horizontal then rotated 90 CCW":
+            case "Mirrored horizontal then rotated 90 CW":
               return _this.sizeContainer($image.height(), $image.width(), imageNumber);
             default:
               return _this.sizeContainer($image.width(), $image.height(), imageNumber);
@@ -230,12 +232,29 @@ Licensed under the Creative Commons Attribution 2.5 License - http://creativecom
       this.$container.css('transform', '');
       $image.css('transform', '');
       switch (this.album[imageNumber].rotate) {
+        case "Rotated 90 CW":
+          this.$container.css('transform', 'rotate(90deg)');
+          $image.css('transform', 'scale(-1,-1)');
+          break;
         case "Rotated 90 CCW":
           this.$container.css('transform', 'rotate(90deg)');
           break;
-        case "Rotated 90 CW":
+        case "Rotated 180":
+          $image.css('transform', 'scale(-1,-1)');
+          break;
+        case "Mirrored horizontal":
+          $image.css('transform', 'scaleX(-1)');
+          break;
+        case "Mirrored vertical":
+          $image.css('transform', 'scaleY(-1)');
+          break;
+        case "Mirrored horizontal then rotated 90 CCW":
           this.$container.css('transform', 'rotate(90deg)');
-          this.$lightbox.find('.lb-image').css('transform', 'scaleX(-1)');
+          $image.css('transform', 'scaleY(-1)');
+          break;
+        case "Mirrored horizontal then rotated 90 CW":
+          this.$container.css('transform', 'rotate(90deg)');
+          $image.css('transform', 'scaleX(-1)');
       }
       oldWidth = this.$outerContainer.outerWidth();
       oldHeight = this.$outerContainer.outerHeight();
@@ -342,9 +361,10 @@ Licensed under the Creative Commons Attribution 2.5 License - http://creativecom
       $(window).off("resize", this.sizeOverlay);
       this.$lightbox.fadeOut(this.options.fadeDuration);
       this.$overlay.fadeOut(this.options.fadeDuration);
-      return $('select, object, embed').css({
+      $('select, object, embed').css({
         visibility: "visible"
       });
+      return this.$overlay.onClick;
     };
 
     return Lightbox;
