@@ -19,9 +19,9 @@ Licensed under the Creative Commons Attribution 2.5 License - http://creativecom
 
   LightboxOptions = (function() {
     function LightboxOptions() {
-      this.fadeDuration = 200;
+      this.fadeDuration = 500;
       this.fitImagesInViewport = true;
-      this.resizeDuration = 200;
+      this.resizeDuration = 700;
       this.showImageNumberLabel = true;
       this.wrapAround = false;
     }
@@ -39,6 +39,8 @@ Licensed under the Creative Commons Attribution 2.5 License - http://creativecom
       this.options = options;
       this.album = [];
       this.currentImageIndex = void 0;
+      this.isMobileWebkit = RegExp(" AppleWebKit/").test(navigator.userAgent) && RegExp(" Mobile/").test(navigator.userAgent);
+      this.isChromeforiOS = this.isMobileWebkit && RegExp(" CriOS/").test(navigator.userAgent);
       this.init();
     }
 
@@ -57,7 +59,7 @@ Licensed under the Creative Commons Attribution 2.5 License - http://creativecom
     };
 
     Lightbox.prototype.build = function() {
-      $("<div id='lightboxOverlay' class='lightboxOverlay'></div><div id='lightbox' class='lightbox'><div class='lb-outerContainer'><div class='lb-container'><img class='lb-image' src='' /></div><div class='lb-nav'><a class='lb-prev' href='' ></a><a class='lb-next' href='' ></a></div><div class='lb-loader'><a class='lb-cancel'></a></div></div><div class='lb-dataContainer'><div class='lb-data'><div class='lb-details'><span class='lb-caption'></span><span class='lb-number'></span></div><div class='lb-closeContainer'><a class='lb-close'></a></div></div></div></div>").appendTo($('body'));
+      $("<div id='lightboxOverlay' class='lightboxOverlay'></div><div id='lightbox' class='lightbox'><div class='lb-outerContainer'><div class='lb-container'><img class='lb-image' src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=' /></div><div class='lb-nav'><a class='lb-prev' href='' ></a><a class='lb-next' href='' ></a></div><div class='lb-loader'><a class='lb-cancel'></a></div></div><div class='lb-dataContainer'><div class='lb-data'><div class='lb-details'><span class='lb-caption'></span><span class='lb-number'></span></div><div class='lb-closeContainer'><a class='lb-close'></a></div></div></div></div>").appendTo($('body'));
       this.$lightbox = $('#lightbox');
       this.$overlay = $('#lightboxOverlay');
       this.$outerContainer = this.$lightbox.find('.lb-outerContainer');
@@ -183,38 +185,64 @@ Licensed under the Creative Commons Attribution 2.5 License - http://creativecom
       preloader = new Image();
       preloader.onload = (function(_this) {
         return function() {
-          var $preloader, imageHeight, imageWidth, maxImageHeight, maxImageWidth, windowHeight, windowWidth;
+          var $preloader, imageHeight, imageWidth, maxImageHeight, maxImageWidth, plheight, plwidth, windowHeight, windowWidth;
           $image.attr('src', _this.album[imageNumber].link);
-          $preloader = $(preloader);
-          $image.width(preloader.width);
-          $image.height(preloader.height);
-          if (_this.options.fitImagesInViewport) {
-            windowWidth = $(window).width();
-            windowHeight = $(window).height();
-            maxImageWidth = windowWidth - _this.containerLeftPadding - _this.containerRightPadding - 20;
-            maxImageHeight = windowHeight - _this.containerTopPadding - _this.containerBottomPadding - 380;
-            if ((preloader.width > maxImageWidth) || (preloader.height > maxImageHeight)) {
-              if ((preloader.width / maxImageWidth) > (preloader.height / maxImageHeight)) {
-                imageWidth = maxImageWidth;
-                imageHeight = parseInt(preloader.height / (preloader.width / imageWidth), 10);
-                $image.width(imageWidth);
-                $image.height(imageHeight);
-              } else {
-                imageHeight = maxImageHeight;
-                imageWidth = parseInt(preloader.width / (preloader.height / imageHeight), 10);
-                $image.width(imageWidth);
-                $image.height(imageHeight);
-              }
-            }
-          }
           switch (_this.album[imageNumber].rotate) {
             case "Rotated 90 CCW":
             case "Rotated 90 CW":
             case "Mirrored horizontal then rotated 90 CCW":
             case "Mirrored horizontal then rotated 90 CW":
-              return _this.sizeContainer($image.height(), $image.width(), imageNumber);
+              _this.isSideways = true;
+              break;
             default:
-              return _this.sizeContainer($image.width(), $image.height(), imageNumber);
+              _this.isSideways = false;
+          }
+          $preloader = $(preloader);
+          if (_this.isMobileWebkit) {
+            _this.isAutoRotate = true;
+            if (_this.isChromeforiOS && (Math.max(preloader.width, preloader.height) < 2551)) {
+              _this.isAutoRotate = false;
+            }
+          } else {
+            _this.isAutoRotate = false;
+          }
+          if (_this.isSideways && !_this.isAutoRotate) {
+            imageWidth = preloader.height;
+            imageHeight = preloader.width;
+            plwidth = preloader.height;
+            plheight = preloader.width;
+          } else {
+            imageWidth = preloader.width;
+            imageHeight = preloader.height;
+            plwidth = preloader.width;
+            plheight = preloader.height;
+          }
+          if (_this.options.fitImagesInViewport) {
+            windowWidth = $(window).width();
+            windowHeight = $(window).height();
+            maxImageWidth = windowWidth - _this.containerLeftPadding - _this.containerRightPadding - 20;
+            maxImageHeight = windowHeight - _this.containerTopPadding - _this.containerBottomPadding - 110;
+            if ((imageWidth > maxImageWidth) || (imageHeight > maxImageHeight)) {
+              if ((imageWidth / maxImageWidth) > (imageHeight / maxImageHeight)) {
+                imageWidth = maxImageWidth;
+                imageHeight = parseInt(plheight / (plwidth / maxImageWidth), 10);
+              } else {
+                imageHeight = maxImageHeight;
+                imageWidth = parseInt(plwidth / (plheight / maxImageHeight), 10);
+              }
+            }
+          }
+          if (_this.isSideways) {
+            $image.width(imageHeight);
+            $image.height(imageWidth);
+          } else {
+            $image.width(imageWidth);
+            $image.height(imageHeight);
+          }
+          if (_this.isSideways && _this.isAutoRotate) {
+            return _this.sizeContainer(imageHeight, imageWidth, imageNumber);
+          } else {
+            return _this.sizeContainer(imageWidth, imageHeight, imageNumber);
           }
         };
       })(this);
@@ -229,32 +257,34 @@ Licensed under the Creative Commons Attribution 2.5 License - http://creativecom
     Lightbox.prototype.sizeContainer = function(imageWidth, imageHeight, imageNumber) {
       var $image, newHeight, newWidth, oldHeight, oldWidth;
       $image = this.$lightbox.find('.lb-image');
-      this.$container.css('transform', '');
-      $image.css('transform', '');
-      switch (this.album[imageNumber].rotate) {
-        case "Rotated 90 CW":
-          this.$container.css('transform', 'rotate(90deg)');
-          $image.css('transform', 'scale(-1,-1)');
-          break;
-        case "Rotated 90 CCW":
-          this.$container.css('transform', 'rotate(90deg)');
-          break;
-        case "Rotated 180":
-          $image.css('transform', 'scale(-1,-1)');
-          break;
-        case "Mirrored horizontal":
-          $image.css('transform', 'scaleX(-1)');
-          break;
-        case "Mirrored vertical":
-          $image.css('transform', 'scaleY(-1)');
-          break;
-        case "Mirrored horizontal then rotated 90 CCW":
-          this.$container.css('transform', 'rotate(90deg)');
-          $image.css('transform', 'scaleY(-1)');
-          break;
-        case "Mirrored horizontal then rotated 90 CW":
-          this.$container.css('transform', 'rotate(90deg)');
-          $image.css('transform', 'scaleX(-1)');
+      if (!this.isAutoRotate) {
+        this.$container.css('transform', '');
+        $image.css('transform', '');
+        switch (this.album[imageNumber].rotate) {
+          case "Rotated 90 CW":
+            this.$container.css('transform', 'rotate(90deg)');
+            $image.css('transform', 'scale(-1,-1)');
+            break;
+          case "Rotated 90 CCW":
+            this.$container.css('transform', 'rotate(90deg)');
+            break;
+          case "Rotated 180":
+            $image.css('transform', 'scale(-1,-1)');
+            break;
+          case "Mirrored horizontal":
+            $image.css('transform', 'scaleX(-1)');
+            break;
+          case "Mirrored vertical":
+            $image.css('transform', 'scaleY(-1)');
+            break;
+          case "Mirrored horizontal then rotated 90 CCW":
+            this.$container.css('transform', 'rotate(90deg)');
+            $image.css('transform', 'scaleY(-1)');
+            break;
+          case "Mirrored horizontal then rotated 90 CW":
+            this.$container.css('transform', 'rotate(90deg)');
+            $image.css('transform', 'scaleX(-1)');
+        }
       }
       oldWidth = this.$outerContainer.outerWidth();
       oldHeight = this.$outerContainer.outerHeight();
@@ -361,10 +391,9 @@ Licensed under the Creative Commons Attribution 2.5 License - http://creativecom
       $(window).off("resize", this.sizeOverlay);
       this.$lightbox.fadeOut(this.options.fadeDuration);
       this.$overlay.fadeOut(this.options.fadeDuration);
-      $('select, object, embed').css({
+      return $('select, object, embed').css({
         visibility: "visible"
       });
-      return this.$overlay.onClick;
     };
 
     return Lightbox;

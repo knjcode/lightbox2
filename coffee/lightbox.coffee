@@ -18,9 +18,9 @@ $ = jQuery
 
 class LightboxOptions
   constructor: ->
-    @fadeDuration         = 200
-    @fitImagesInViewport  = true
-    @resizeDuration       = 200
+    @fadeDuration         = 500
+    @fitImagesInViewport  = true 
+    @resizeDuration       = 700
     @showImageNumberLabel = true
     @wrapAround           = false
 
@@ -33,6 +33,8 @@ class Lightbox
   constructor: (@options) ->
     @album             = []
     @currentImageIndex = undefined
+    @isMobileWebkit = RegExp(" AppleWebKit/").test(navigator.userAgent) and RegExp(" Mobile/").test(navigator.userAgent)
+    @isChromeforiOS = @isMobileWebkit and RegExp(" CriOS/").test(navigator.userAgent)
     @init()
 
 
@@ -52,9 +54,7 @@ class Lightbox
   # Build html for the lightbox and the overlay.
   # Attach event handlers to the new DOM elements. click click click
   build: ->
-    #$("<div id='lightboxOverlay' class='lightboxOverlay'></div><div id='lightbox' class='lightbox'><div class='lb-outerContainer'><div class='lb-container'><img class='lb-image' src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=' /><div class='lb-nav'><a class='lb-prev' href='' ></a><a class='lb-next' href='' ></a></div><div class='lb-loader'><a class='lb-cancel'></a></div></div></div><div class='lb-dataContainer'><div class='lb-data'><div class='lb-details'><span class='lb-caption'></span><span class='lb-number'></span></div><div class='lb-closeContainer'><a class='lb-close'></a></div></div></div></div>").appendTo($('body'));
-    # DOM構造の変更 lb-container内のnav等を外だし
-    $("<div id='lightboxOverlay' class='lightboxOverlay'></div><div id='lightbox' class='lightbox'><div class='lb-outerContainer'><div class='lb-container'><img class='lb-image' src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=' /></div><div class='lb-nav'><a class='lb-prev' href='' ></a><a class='lb-next' href='' ></a></div><div class='lb-loader'><a class='lb-cancel'></a></div></div><div class='lb-dataContainer'><div class='lb-data'><div class='lb-details'><span class='lb-caption'></span><span class='lb-number'></span></div><div class='lb-closeContainer'><a class='lb-close'></a></div></div></div></div>").appendTo($('body'));
+    $("<div id='lightboxOverlay' class='lightboxOverlay'></div><div id='lightbox' class='lightbox'><div class='lb-outerContainer'><div class='lb-container'><img class='lb-image' src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=' /></div><div class='lb-nav'><a class='lb-prev' href='' ></a><a class='lb-next' href='' ></a></div><div class='lb-loader'><a class='lb-cancel'></a></div></div><div class='lb-dataContainer'><div class='lb-data'><div class='lb-details'><span class='lb-caption'></span><span class='lb-number'></span></div><div class='lb-closeContainer'><a class='lb-close'></a></div></div></div></div>").appendTo($('body'))
 
     # Cache jQuery objects
     @$lightbox       = $('#lightbox')
@@ -168,11 +168,33 @@ class Lightbox
     preloader = new Image()
     preloader.onload = () =>
       $image.attr 'src', @album[imageNumber].link
-      
-      $preloader = $(preloader)
 
-      $image.width preloader.width
-      $image.height preloader.height
+      switch @album[imageNumber].rotate
+        when "Rotated 90 CCW", "Rotated 90 CW", "Mirrored horizontal then rotated 90 CCW", "Mirrored horizontal then rotated 90 CW"
+          @isSideways = true
+        else
+          @isSideways = false
+     
+      $preloader = $(preloader)
+      if @isMobileWebkit
+        @isAutoRotate = true
+        if @isChromeforiOS and (Math.max(preloader.width, preloader.height) < 2551)
+          @isAutoRotate = false
+      else
+        @isAutoRotate = false
+
+      if @isSideways and not @isAutoRotate
+        imageWidth = preloader.height
+        imageHeight = preloader.width
+        # Keep preloader size for sideways
+        plwidth = preloader.height
+        plheight = preloader.width
+      else
+        imageWidth = preloader.width
+        imageHeight = preloader.height
+        # Keep preloader size
+        plwidth = preloader.width
+        plheight = preloader.height
 
       if @options.fitImagesInViewport
         # Fit image inside the viewport.
@@ -180,29 +202,30 @@ class Lightbox
         windowWidth    = $(window).width()
         windowHeight   = $(window).height()
         maxImageWidth  = windowWidth - @containerLeftPadding - @containerRightPadding - 20
-        # change to -380 by knjcode
-        maxImageHeight = windowHeight - @containerTopPadding - @containerBottomPadding - 380
-        
+        maxImageHeight = windowHeight - @containerTopPadding - @containerBottomPadding - 110
+
         # Is there a fitting issue at all?
-        if (preloader.width > maxImageWidth) || (preloader.height > maxImageHeight)
+        if (imageWidth > maxImageWidth) || (imageHeight > maxImageHeight)
           # Use the highest scaling factor to determine which side of the image the scaling is based on
-          if (preloader.width / maxImageWidth) > (preloader.height / maxImageHeight)
+          if (imageWidth / maxImageWidth) > (imageHeight / maxImageHeight)
             imageWidth  = maxImageWidth
-            imageHeight = parseInt (preloader.height / (preloader.width/imageWidth)), 10
-            $image.width imageWidth
-            $image.height imageHeight
+            imageHeight = parseInt (plheight / (plwidth / maxImageWidth)), 10
           else
             imageHeight = maxImageHeight
-            imageWidth  = parseInt (preloader.width / (preloader.height/imageHeight)), 10
-            $image.width imageWidth
-            $image.height imageHeight
+            imageWidth  = parseInt (plwidth / (plheight / maxImageHeight)), 10
 
-      # Add by knjcode & plus imageNumber
-      switch @album[imageNumber].rotate
-        when "Rotated 90 CCW", "Rotated 90 CW", "Mirrored horizontal then rotated 90 CCW", "Mirrored horizontal then rotated 90 CW"
-          @sizeContainer $image.height(), $image.width(), imageNumber
-        else
-          @sizeContainer $image.width(), $image.height(), imageNumber
+      if @isSideways
+        $image.width imageHeight
+        $image.height imageWidth
+      else
+        $image.width imageWidth
+        $image.height imageHeight
+
+      # Pass imageNumber to @sizeContainer for image rotation
+      if @isSideways and @isAutoRotate # for mobileWebkit
+        @sizeContainer imageHeight, imageWidth, imageNumber
+      else
+        @sizeContainer imageWidth, imageHeight, imageNumber
 
     preloader.src = @album[imageNumber].link
     @currentImageIndex = imageNumber
@@ -220,29 +243,31 @@ class Lightbox
   sizeContainer: (imageWidth, imageHeight, imageNumber) ->
     $image = @$lightbox.find('.lb-image')
 
-    # reset rotate & reflect
-    @$container.css('transform','')
-    $image.css('transform','')
-
     # rotate & reflect image
-    switch @album[imageNumber].rotate
-      when "Rotated 90 CW"
-        @$container.css('transform','rotate(90deg)')
-        $image.css('transform','scale(-1,-1)')
-      when "Rotated 90 CCW"
-        @$container.css('transform','rotate(90deg)')
-      when "Rotated 180"
-        $image.css('transform','scale(-1,-1)')
-      when "Mirrored horizontal"
-        $image.css('transform','scaleX(-1)')
-      when "Mirrored vertical"
-        $image.css('transform','scaleY(-1)')
-      when "Mirrored horizontal then rotated 90 CCW"
-        @$container.css('transform','rotate(90deg)')
-        $image.css('transform','scaleY(-1)')
-      when "Mirrored horizontal then rotated 90 CW"
-        @$container.css('transform','rotate(90deg)')
-        $image.css('transform','scaleX(-1)')
+    if not @isAutoRotate
+
+      # reset rotate & reflect before rotate image
+      @$container.css('transform','')
+      $image.css('transform','')
+
+      switch @album[imageNumber].rotate
+        when "Rotated 90 CW"
+          @$container.css('transform','rotate(90deg)')
+          $image.css('transform','scale(-1,-1)')
+        when "Rotated 90 CCW"
+          @$container.css('transform','rotate(90deg)')
+        when "Rotated 180"
+          $image.css('transform','scale(-1,-1)')
+        when "Mirrored horizontal"
+          $image.css('transform','scaleX(-1)')
+        when "Mirrored vertical"
+          $image.css('transform','scaleY(-1)')
+        when "Mirrored horizontal then rotated 90 CCW"
+          @$container.css('transform','rotate(90deg)')
+          $image.css('transform','scaleY(-1)')
+        when "Mirrored horizontal then rotated 90 CW"
+          @$container.css('transform','rotate(90deg)')
+          $image.css('transform','scaleX(-1)')
 
     oldWidth  = @$outerContainer.outerWidth()
     oldHeight = @$outerContainer.outerHeight()
@@ -361,7 +386,6 @@ class Lightbox
     @$lightbox.fadeOut @options.fadeDuration
     @$overlay.fadeOut @options.fadeDuration
     $('select, object, embed').css visibility: "visible"
-    @$overlay.onClick
 
 
 $ ->
